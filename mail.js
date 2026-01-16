@@ -47,15 +47,11 @@
 require('dotenv').config();
 const { Resend } = require("resend");
 
-console.log("Resend API Key:", process.env.RESEND_API);
-const resend = new Resend(process.env.RESEND_API);
+console.log("Resend API Key:", process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendMail = async (userEmail, otp) => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1; // months start from 0
-  const day = now.getDate();
-  let value = otp + year + month + day;
+  let value = otp + 1001;
   console.log("hi", value);
   const html = `
     <!DOCTYPE html>
@@ -148,5 +144,6 @@ const sendMail = async (userEmail, otp) => {
 };
 
 module.exports = { sendMail };
+
 
 

@@ -61,6 +61,7 @@ router.get('/username/:username',token,async(req,res)=>{
 });
         if(user){
             let userData={
+                id:user._id,
                 name:user.name,
                 username:user.username,
                 avatar:user.avatar,
@@ -183,3 +184,4 @@ router.get('/messages/:chatId',token,async(req,res)=>{
 
 
 module.exports=router;
+

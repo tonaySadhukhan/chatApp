@@ -88,69 +88,68 @@ router.post('/send-otp',async(req,res)=>{
     }
 });
 
-router.post('/create-chat',token,async(req,res)=>{
-   const { participants } = req.body;
+router.post('/create-chat', token, async (req, res) => {
+  const { participants } = req.body;
 
-try {
-  // 1️⃣ Convert usernames → ObjectIds
-  const users = await User.find({
-    username: { $in: participants }
-  }).select('_id username');
+  try {
+    // 1️⃣ Find users by username
+    const users = await User.find({
+      username: { $in: participants }
+    }).select('_id username');
 
-  if (users.length !== participants.length) {
-    return res.status(404).json({
-      message: 'One or more users not found'
+    if (users.length !== participants.length) {
+      return res.status(404).json({
+        message: 'One or more users not found'
+      });
+    }
+
+    // 2️⃣ Extract ObjectIds
+    const participantIds = users.map(u => u._id);
+
+    // 3️⃣ Stable roomId
+    const roomId = participantIds
+      .map(id => id.toString())
+      .sort()
+      .join('_');
+
+    // 4️⃣ Prevent duplicate 1-to-1 chat
+    const existingChat = await Chat.findOne({
+      participants: { $all: participantIds, $size: participantIds.length }
+    });
+
+    if (existingChat) {
+      return res.status(200).json({
+        message: 'Chat already exists',
+        chat: existingChat
+      });
+    }
+
+    // 5️⃣ Create new chat
+    const chat = new Chat({
+      participants: participantIds,
+      roomId
+    });
+
+    await chat.save();
+
+    // 6️⃣ Push chat to users
+    await User.updateMany(
+      { _id: { $in: participantIds } },
+      { $push: { chats: chat._id } }
+    );
+
+    res.status(201).json({
+      message: 'Chat created successfully',
+      chat
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: 'Error creating chat',
+      error: err.message
     });
   }
-
-  // 2️⃣ Extract IDs
-  const participantIds = users.map(u => u._id);
-
-  // 3️⃣ Generate roomId using ObjectIds (stable & unique)
-  const roomId = participantIds
-    .map(id => id.toString())
-    .sort()
-    .join('_');
-
-  // 4️⃣ Prevent duplicate chat
-  const existingChat = await Chat.findOne({
-    participants: { $all: participantIds }
-  });
-
-  if (existingChat) {
-    return res.status(200).json({
-      message: 'Chat already exists',
-      chat: existingChat
-    });
-  }
-
-  // 5️⃣ Create chat
-  const chat = new Chat({
-    participants: participantIds,
-    roomId
-  });
-
-  await chat.save();
-
-  user.findByIdAndUpdate(participantIds[0], {
-    $push: { chats: chat._id }
-  }).exec();
-  user.findByIdAndUpdate(participantIds[1], {
-    $push: { chats: chat._id }
-  }).exec();
-
-  res.status(201).json({
-    message: 'Chat created successfully',
-    chat
-  });
-
-} catch (err) {
-  res.status(500).json({
-    message: 'Error creating chat',
-    error: err.message
-  });
-}
-
 });
 
 router.get('/mychats/:userId',token,async(req,res)=>{
@@ -181,5 +180,6 @@ router.get('/messages/:chatId',token,async(req,res)=>{
         res.status(500).json({message:'Error fetching messages',error:err.message});
     }
 });
+
 
 module.exports=router;

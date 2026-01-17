@@ -51,6 +51,7 @@ console.log("Resend API Key:", process.env.RESEND_API_KEY);
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendMail = async (userEmail, otp) => {
+ try{
   let value = otp + 1001;
   console.log("hi", value);
   const html = `
@@ -141,9 +142,13 @@ const sendMail = async (userEmail, otp) => {
     html,
   });
   console.log("Email sent:", x);
+ }catch(err){
+ console.log(err);
+ }
 };
 
 module.exports = { sendMail };
+
 
 
 
